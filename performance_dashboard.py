@@ -16,7 +16,7 @@ pd.set_option('mode.chained_assignment', None)
 st.set_page_config(layout='wide')
 st.title('API - Performance Evolution Dashboard')
 st.markdown('Developed & Maintained by: DS Data Applications Team')
-st.markdown('Last updated data as of **_20th_ _March_ _2022_**.')
+st.markdown('Last updated data as of **_27th_ _March_ _2022_**.')
 radio = st.sidebar.radio('Report Type:', ['Aggregate view', 'Breakdown per client (Selection by client name)',
                                           'Breakdown per client (selection by client username)', 'Breakdown per method group',
                                           'Breakdown per product'])
@@ -49,7 +49,7 @@ def calc_type(version, method):
 
 def calc_method(method):
     getdata = ['GetData', 'REST2.Companies.data', 'GetEngagementInfo', 'GetListData', 'REST.GetData', 'GetExchangeRate', 'REST2.Contacts.data', 'REST2.Companies.remoteaccess.data', 'REST2.news.data', 'GetLabels', 'REST2.bvdidshistory.data', 'GetAvailableAccountTypePreferences', 'GetAnalysisPDF', 'GetEngagementAnalyses',
-               'GetPeerValue', 'GetReportSection', 'REST2.ContactsPortfolio.Data', 'REST2.CompaniesPortfolio.Data', 'REST2.Rates.data', 'REST2.CompaniesPortfolio.data.', 'GetAvailableSearches', 'GetEngagementPDF', 'REST2.Companies.data.', 'GetSavedSearches', 'REST2.Patents.data', 'GetAllEngagementsForLeadCompanyBvdId']
+               'GetPeerValue', 'GetReportSection', 'REST2.ContactsPortfolio.Data', 'REST2.CompaniesPortfolio.Data', 'REST2.Rates.data', 'REST2.CompaniesPortfolio.data.', 'GetAvailableSearches', 'GetEngagementPDF', 'REST2.Companies.data.', 'GetSavedSearches', 'REST2.Patents.data', 'GetAllEngagementsForLeadCompanyBvdId','REST2.Companies.data.Dashboard']
     match = ['Match', 'REST.Match', 'MatchWithCustomRules', 'REST2.companies.match',
              'REST2.companies.match.', 'REST2.companies.match.data.', 'MatchWithOwnData', 'MatchIdentifier']
     other = ['FindByRecordId', 'Find', 'FindByBVDId', 'ClearSelection', 'FindAnd', 'FindWithRecordSet', 'FindByName', 'UpdateMyDataTable', 'SetAccountTypePreference', 'CreateQueryExt', 'SetLanguage', 'FindFormula', 'CreateEngagement', 'DeleteEngagement', 'FindOr', 'CreateQueryFromListFormat', 'CreateQuery', 'CreateQuery2Ext', 'FindWithStrategy', 'REST2.Companies.Screening.ExternalWatchlist',
@@ -87,7 +87,16 @@ aggregate['Avg time x call (s)'] = aggregate['ServerTime (m)'] * \
     60/(aggregate['Successful calls']+aggregate['Failed calls'])
 aggregate['Failure rate'] = (
     aggregate['Failed calls']/(aggregate['Successful calls']+aggregate['Failed calls']))*100
-aggregate = aggregate.reset_index().round(2)
+aggregate = aggregate.reset_index()
+sum_df = pd.DataFrame([str(round(float(aggregate[-1:]['Successful calls'])/1000000, 2))+'M', str(round(float(aggregate[-2:]['Successful calls'].pct_change()[-1:]*100), 1)),
+                           str(round(float(aggregate[-1:]['Failed calls'])/1000, 2))+'K', str(round(float(aggregate[-2:]['Failed calls'].pct_change()[-1:]*100), 1))]).T
+sum_df.columns = ['Sum of successful calls W',
+                      'Change from W-1 to W(%)', 'Sum of failed calls W', 'Change from W-1 to W (%)']
+avg_df = pd.DataFrame([str(round(float(aggregate[-1:]['Avg time x call (s)']), 2)), str(round(float(aggregate[-2:]['Avg time x call (s)'].pct_change()[-1:]*100), 1)),
+                           str(round(float(aggregate[-1:]['Failure rate']), 2)), str(round(float(aggregate[-2:]['Failure rate'].pct_change()[-1:]*100), 1))]).T
+avg_df.columns = [
+        'Avg time per call (s) W', 'Change from W-1 to W(%)', 'Failure rate W', 'Change from W-1 to W (%)']
+aggregate = aggregate.round(2)        
 if radio == r'Aggregate view':
     fig1 = go.Figure()
     fig1.add_trace(go.Bar(x=aggregate.Weektag, y=aggregate['Successful calls'], text=aggregate['Successful calls'],
@@ -97,10 +106,6 @@ if radio == r'Aggregate view':
     fig1.update_traces(texttemplate='%{text:.3s}')
     fig1.update_layout(title='Aggregate view', barmode='stack')
     st.plotly_chart(fig1)
-    sum_df = pd.DataFrame([str(round(float(aggregate[-1:]['Successful calls'])/1000000, 2))+'M', str(round(float(aggregate[-2:]['Successful calls'].pct_change()[-1:]*100), 1)),
-                           str(round(float(aggregate[-1:]['Failed calls'])/1000, 2))+'K', str(round(float(aggregate[-2:]['Failed calls'].pct_change()[-1:]*100), 1))]).T
-    sum_df.columns = ['Sum of successful calls W',
-                      'Change from W-1 to W(%)', 'Sum of failed calls W', 'Change from W-1 to W (%)']
     st.write(sum_df.reset_index(drop=True))
     fig = go.Figure()
     fig.add_trace(go.Bar(x=aggregate.Weektag, y=aggregate['Avg time x call (s)'], text=aggregate['Avg time x call (s)'],
@@ -109,10 +114,6 @@ if radio == r'Aggregate view':
                   y=aggregate['Failure rate'], mode='lines+markers', name='Failure rate', marker_color='rgb(237, 125, 49)'))
     fig.update_traces(texttemplate='%{text:.3s}')
     st.plotly_chart(fig)
-    avg_df = pd.DataFrame([str(round(float(aggregate[-1:]['Avg time x call (s)']), 2)), str(round(float(aggregate[-2:]['Avg time x call (s)'].pct_change()[-1:]*100), 1)),
-                           str(round(float(aggregate[-1:]['Failure rate']), 2)), str(round(float(aggregate[-2:]['Failure rate'].pct_change()[-1:]*100), 1))]).T
-    avg_df.columns = [
-        'Avg time per call (s) W', 'Change from W-1 to W(%)', 'Failure rate W', 'Change from W-1 to W (%)']
     # st.markdown('**Summary Report - {}:**'.format('Aggregate view'))
     st.write(avg_df.reset_index(drop=True))
 # Download Raw Data
